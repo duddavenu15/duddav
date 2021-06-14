@@ -1,0 +1,72 @@
+Two pipelines : Build pipeline and release pipeline 
+
+Build pipeline : if anybody make changes in the repository automtically get the code from repo and it will test, build and publish the artifact into the drop folder
+
+Release Pipeline: it will deoply artifact to the respecive environments ..Dev-- QA -- prd
+1) The build should trigger as soon as anyone in the dev team checks in code to master branch.
+When Devloper push the code to master branch that build pipeline will be auto triggered as configured the trigger in the pipeline 
+Build pipeline
+triggers -->enable continuous integration
+branch filters
+ type           brach specification
+ include        master
+
+2) There will be test projects which will create and maintained in the solution along the Web and API.
+
+Create build pipeline >> select Azure Repository -->Autherize it .
+need to be configure the task under agent Job
+
+As it is a Dotnet core application need to use Asp.Net core Template .
+Restore - .Net core
+Prepare analysis on sonar Cloud   ( If you wanted to configure static code analysis)
+Build   - .Net Core
+Test    - .Net Core
+Publish - .Net Core
+Run Code Analysis
+Publish Quality Gate result
+Publish Artifact       --------------    It will copy the artifact to the Drop folder
+need to confiure all required perameters for all above tasks.
+if test fails build job will be failing as part of the confiuration in build job .. 
+
+
+3) The deployment of code and artifacts should be automated to Dev environment
+
+Create release pipeline
+
+Artifacts--> add an artifact -->source type as Build -- project name and source build 
+configure trigger as each build completion .
+
+Stages -- Dev ,QA and PROD
+ Dev stage -- add task --> Deploy Azure app service - need configure
+                            stage name , azure subscription , app type ,app service name , package folder
+
+4) Upon successful deployment to the Dev environment, deployment should be easily promoted to QA and Prod through automated process.
+ 
+ Clone Dev stage to create other QA and Prd
+ QA stage -- add task --> Deploy Azure app service - need configure
+                            stage name , azure subscription , app type ,app service name , package folder
+ Pre deployment conditions --> pre depolyment apporval -- give a user as approver 
+
+ Prd Stage -- add task --> Deploy Azure app service - need configure
+                            stage name , azure subscription , app type ,app service name , package folder
+ 
+5) The deployments to QA and Prod should be enabled with Approvals from approvers only.
+
+   Pre deployment conditions --> pre depolyment apporval -- give a user as approver
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

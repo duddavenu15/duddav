@@ -1,0 +1,44 @@
+1) What are different artifacts you need to create - name of the artifacts and its purpose
+   main.tf ,varible.tf terraform.tfvars
+2) List the tools you will to create and store the Terraform templates.
+   Vscode
+   Gitrepo/Azure Repo
+   storage account  
+
+3) Explain the process and steps to create automated deployment pipeline.
+
+Create a service connection   
+Push the code -- Azure repo
+  create a CI pipeline ( add empty job --> Copy task (it will copy the files from repo)
+                                           publish task -- it will publish the artifacts in build pipeline
+                                           publish artifact task -- it will publish the artifact in the drop folder  which is the source of release pipeline(cd)
+  Create a CD pipeline (release)  -- add the artifact- choose source as build 
+                                     add stages - dev ,QA .prd
+                                     stages -add tasks 
+                                                   import terraform plugin from azure market place 
+                                                   1)terraform init  (it is initate the environment )
+                                                   2)terraform plan  
+                                                   3)Terraform apply --autoaproval  (it will provistion the resources in the azure .
+                                     configure the tirggers promot to different enivironments 
+
+
+   
+4) Create a sample Terraform template you will use to deploy Below services:
+please check the .tf files related to below resources .
+Vnet
+2 Subnet
+NSG to open port 80 and 443
+1 Window VM in each subnet
+1 Storage account
+5) Explain how will you access the password stored in Key Vault and use it as Admin Password in the VM Terraform template.
+
+1)Create Keyvault & Secret resource 
+2)Create a data with vault uri
+
+data "azurerm_key_vault_secret" "mySecret" {
+name = "labuser"
+vault_uri = "https://winkeyvault.vault.azure.net/"
+}
+
+3)access the password as like below 
+admin_password = data.azurerm_key_vault_secret.mySecret.value

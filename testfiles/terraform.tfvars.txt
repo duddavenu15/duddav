@@ -1,0 +1,5 @@
+  arm_endpoint    = "https://management.{region}.{domain}"
+  subscription_id = "xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx"
+  client_id       = "applicationId"
+  client_secret   = "applicationPassword"
+  tenant_id       = "xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx"

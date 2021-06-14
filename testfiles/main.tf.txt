@@ -1,0 +1,205 @@
+provider "azurerm" {
+   subscription_id = var.subscription_id
+  client_id       = var.client_id
+  client_secret   = var.client_secret
+  tenant_id       = var.tenant_id
+}
+
+# Create a resource group
+resource "azurerm_resource_group" "rg" {
+  name     = var.rg_name
+  location = var.location
+
+  tags = {
+    environment = var.rg_tag
+  }
+}
+resource "azurerm_storage_account" "storageacc" {
+  name                     = "storageaccount01"
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
+  account_tier            = "Standard"
+  account_replication_type = "LRS"
+
+   tags = {
+    environment = "Terraform Storage"
+    CreatedBy = "venu"
+      }
+
+resource "azurerm_key_vault" "keyvault" {
+  name                       = "winkeyvault"
+  location                   = azurerm_resource_group.rg.location
+  resource_group_name        = azurerm_resource_group.rg.name
+  tenant_id                  = var.tenant_id
+  sku_name                   = "premium"
+  soft_delete_retention_days = 7
+
+  access_policy {
+    tenant_id = var.tenant_id
+    object_id = var.object_id
+
+    key_permissions = [
+      "create",
+      "get",
+    ]
+
+    secret_permissions = [
+      "set",
+      "get",
+      "delete",
+      "purge",
+      "recover"
+    ]
+  }
+}
+
+resource "azurerm_key_vault_secret" "secret" {
+  name         = "adminuser"
+  value        = "P@ssword1234"
+  key_vault_id = azurerm_key_vault.keyvault.id
+
+data "azurerm_key_vault_secret" "mySecret" {
+name = "adminuser"
+vault_uri = "https://winkeyvault.vault.azure.net/"
+}
+
+}
+resource "azurerm_network_security_group" "nsg" {
+  name                = azurerm_resource_group.rg.name}-SecurityGroup
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  security_rule {
+    name                        = "HTTP"
+    priority                    = "100"
+    direction                   = "Inbound"
+    access                      = "Allow"
+    protocol                    = "tcp"
+    source_port_range           = "*"
+    destination_port_range      = "80"
+    source_address_prefix       = "*"
+    destination_address_prefix  = "*"
+  }
+
+  security_rule {
+    name                        = "HTTPS"
+    priority                    = "100"
+    direction                   = "Inbound"
+    access                      = "Allow"
+    protocol                    = "tcp"
+    source_port_range           = "*"
+    destination_port_range      = "443"
+    source_address_prefix       = "*"
+    destination_address_prefix  = "*"
+  }
+
+
+  tags = azurerm_resource_group.rg.tags
+}
+
+resource "azurevm_virtual_network" "virtual-network" {
+  name                = azurerm_resource_group.rg.name-VirtualNetwork"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
+resource "azuresrm_subnet" "subnet1" {
+  name                            = "Subnet1"
+  resource_group_name             = "${azurerm_resource_group.rg.name}"
+  virtual_network_name            = "${azurerm_virtual_network.virtual-network.name}"
+  address_prefix                  = "10.0.0.1/24"
+  network_security_group_id       = "${azurerm_network_security_group.nsg.id}"
+}
+
+resource "azurerm_subnet" "subnet2" {
+  name                            = "Subnet2"
+  resource_group_name             = "${azurerm_resource_group.rg.name}"
+  virtual_network_name            = "${azurerm_virtual_network.virtual-network.name}"
+  address_prefix                  = "10.0.0.2/24"
+  network_security_group_id       = "${azurerm_network_security_group.nsg.id}"
+}
+
+resource "azurerm_network_interface" "nic1" {
+  name                = "winserver1-nic"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  ip_configuration {
+    name                          = "window_Server01_NIC"
+    subnet_id                     = azurerm_subnet.subnet1.id
+    private_ip_address_allocation = "Dynamic"
+  }
+
+
+  tags = azurerm_resource_group.rg.tags
+}
+
+resource "azurerm_network_interface" "nic2" {
+  name                = "winserver2-nic"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  ip_configuration {
+    name                          = "window_Server01_NIC"
+    subnet_id                     = azurerm_subnet.subnet2.id
+    private_ip_address_allocation = "Dynamic"
+  }
+
+  tags = azurerm_resource_group.rg.tags
+}
+
+
+
+
+resource "azurerm_windows_virtual_machine" "vm1" {
+  name                = "Winserver1"
+  resource_group_name = azurerm_resource_group.name
+  location            = azurerm_resource_group.location
+  size                = "Standard_F2"
+  admin_username      = "adminuser"
+  admin_password      = data.azurerm_key_vault_secret.mySecret.value
+  network_interface_ids = [
+    zurerm_network_interface.nic1.id,
+  ]
+
+
+   os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+    delete_os_disk_on_termination = true
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2016-Datacenter"
+    version   = "latest"
+  }
+
+  }
+
+resource "azurerm_windows_virtual_machine" "vm2" {
+name                = "Winserver2"
+  resource_group_name = azurerm_resource_group.name
+  location            = azurerm_resource_group.location
+  size                = "Standard_F2"
+  admin_username      = "adminuser"
+  admin_password      = admin_password = data.azurerm_key_vault_secret.mySecret.value
+  network_interface_ids = [
+    zurerm_network_interface.nic2.id,
+  ]
+
+
+   os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+    delete_os_disk_on_termination = true
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2016-Datacenter"
+    version   = "latest"
+  }
